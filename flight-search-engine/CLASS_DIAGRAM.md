@@ -4,68 +4,141 @@ Diagram ini menggambarkan model domain penerbangan beserta atribut `$fillable`, 
 
 ```mermaid
 classDiagram
-    direction TB
-
-    class Airport {
-        +int id
-        +string airport_code
-        +string airport_name
-        +string city_name
-        +string country_name
-        +outgoingRoutes() HasMany Route
-        +incomingRoutes() HasMany Route
-    }
-
+    %% Models
     class Airline {
-        +int id
-        +string airline_code
-        +string airline_name
-        +flightSchedules() HasMany FlightSchedule
+        -int id
+        -string airline_name
+        -string airline_code
+        -string logo_url
+        -timestamp created_at
+        -timestamp updated_at
+        
+        +flightSchedules() FlightSchedule[]
     }
-
-    class Route {
-        +int id
-        +int origin_id FK
-        +int destination_id FK
-        +string route_code
-        +int distance_km
-        +originAirport() BelongsTo Airport
-        +destinationAirport() BelongsTo Airport
-        +flightSchedules() HasMany FlightSchedule
-    }
-
+    
     class FlightSchedule {
-        +int id
-        +int airline_id FK
-        +int route_id FK
-        +string flight_number
-        +string origin
-        +string destination
-        +date departure_date
-        +time departure_time
-        +time arrival_time
-        +decimal base_price
-        +string flight_status
-        +airline() BelongsTo Airline
-        +route() BelongsTo Route
-        +seatClasses() HasMany FlightSeatClass
+        -int id
+        -int airline_id
+        -int route_id
+        -string flight_number
+        -string origin
+        -string destination
+        -date departure_date
+        -datetime departure_time
+        -datetime arrival_time
+        -decimal base_price
+        -string flight_status
+        -timestamp created_at
+        -timestamp updated_at
+        
+        +airline() Airline
+        +route() Route
+        +seatClasses() FlightSeatClass[]
     }
-
+    
+    class Airport {
+        -int id
+        -string airport_code
+        -string airport_name
+        -string city_name
+        -string country_name
+        -timestamp created_at
+        -timestamp updated_at
+        
+        +originRoutes() Route[]
+        +destinationRoutes() Route[]
+    }
+    
+    class Route {
+        -int id
+        -int origin_id
+        -int destination_id
+        -string route_code
+        -decimal distance_km
+        -timestamp created_at
+        -timestamp updated_at
+        
+        +originAirport() Airport
+        +destinationAirport() Airport
+        +flightSchedules() FlightSchedule[]
+    }
+    
     class FlightSeatClass {
-        +int id
-        +int flight_schedule_id FK
-        +string seat_class
-        +int seat_capacity
-        +int available_seats
-        +decimal class_price
-        +flightSchedule() BelongsTo FlightSchedule
+        -int id
+        -int flight_schedule_id
+        -string seat_class
+        -int seat_capacity
+        -int available_seats
+        -decimal class_price
+        -timestamp created_at
+        -timestamp updated_at
+        
+        +flightSchedule() FlightSchedule
     }
-
-    Airport "1" --> "*" Route : origin_id
-    Airport "1" --> "*" Route : destination_id
-    Airline "1" --> "*" FlightSchedule
-    Route "1" --> "*" FlightSchedule
-    FlightSchedule "1" --> "*" FlightSeatClass
+    
+    %% Request
+    class FlightSearchRequest {
+        -string origin
+        -string destination
+        -date departure_date
+        -int passenger_count
+        -string seat_class
+        
+        +authorize() bool
+        +rules() array
+        +messages() array
+        +validated() array
+    }
+    
+    %% Repository
+    class FlightRepository {
+        -FlightSchedule $flightSchedule
+        
+        +search(origin, destination, date, class) Collection
+        -calculateDuration(flightSchedule) int
+        -getPrice(seatClass) decimal
+        -isAirportValid(code) bool
+        -checkAvailability(seatClass, seats) bool
+    }
+    
+    %% Service
+    class FlightSearchService {
+        -FlightRepository $repository
+        
+        +search(criteria) array
+        -validateCriteria(criteria) bool
+        -formatFlightData(flightSchedules) array
+        -handleError(exception) array
+    }
+    
+    %% Controller
+    class FlightSearchController {
+        -FlightSearchService $service
+        
+        +show() View
+        +search(request) Response
+    }
+    
+    %% Relationships
+    FlightSearchController --> FlightSearchRequest : uses
+    FlightSearchController --> FlightSearchService : uses
+    FlightSearchService --> FlightRepository : uses
+    FlightRepository --> FlightSchedule : queries
+    FlightSchedule --> Airline : belongsTo
+    FlightSchedule --> Route : belongsTo
+    FlightSchedule --> FlightSeatClass : hasMany
+    Route --> Airport : belongsTo (origin)
+    Route --> Airport : belongsTo (destination)
+    Airport --> Route : hasMany (origin)
+    Airport --> Route : hasMany (destination)
+    FlightSeatClass --> FlightSchedule : belongsTo
+    
+    %% Notes
+    note "Validasi Rules:
+    - passenger_count: 1-7
+    - departure_date: >= hari ini
+    - origin != destination"
+        FlightSearchRequest
 ```
 
 ## Catatan implementasi
