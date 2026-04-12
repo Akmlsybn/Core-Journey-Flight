@@ -1,0 +1,116 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Flatpickr — dark theme + dynamic price label (base CSS imported from flight-calendar.js) */
+.flatpickr-calendar {
+    background-color: rgb(15 23 42);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 1rem;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.55);
+    color: rgb(241 245 249);
+}
+
+.flatpickr-months .flatpickr-month {
+    background: transparent;
+    color: rgb(241 245 249);
+    fill: rgb(241 245 249);
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year {
+    background: rgb(2 6 23 / 0.6);
+    color: rgb(241 245 249);
+    border-radius: 0.375rem;
+    font-weight: 600;
+}
+
+.flatpickr-weekdays {
+    background: transparent;
+}
+
+span.flatpickr-weekday {
+    color: rgb(148 163 184);
+    font-weight: 600;
+}
+
+.flatpickr-day {
+    border-radius: 0.5rem;
+    color: rgb(226 232 240);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 0.25rem;
+    height: auto;
+    min-height: 2.75rem;
+    line-height: 1.1;
+}
+
+.flatpickr-day:hover,
+.flatpickr-day:focus {
+    background: rgb(14 165 233 / 0.15);
+    border-color: transparent;
+}
+
+.flatpickr-day.today {
+    border-color: rgb(56 189 248 / 0.5);
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    background: linear-gradient(to bottom right, rgb(14 165 233), rgb(79 70 229));
+    border-color: transparent;
+    color: white;
+}
+
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+    color: rgb(100 116 139 / 0.55);
+}
+
+.flatpickr-day.prevMonthDay .flight-calendar__day-price,
+.flatpickr-day.nextMonthDay .flight-calendar__day-price {
+    opacity: 0.35;
+}
+
+.flight-calendar__day-price {
+    display: block;
+    margin-top: 0.125rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgb(125 211 252);
+    line-height: 1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.flatpickr-day.selected .flight-calendar__day-price,
+.flatpickr-day.startRange .flight-calendar__day-price,
+.flatpickr-day.endRange .flight-calendar__day-price {
+    color: rgb(224 242 254);
+}
+
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg {
+    fill: rgb(56 189 248);
+}
+
+.flatpickr-time input,
+.flatpickr-time .flatpickr-am-pm {
+    background: rgb(2 6 23 / 0.75);
+    color: rgb(241 245 249);
+    border-radius: 0.375rem;
+}
