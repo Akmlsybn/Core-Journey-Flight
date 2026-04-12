@@ -6,4 +6,4 @@ Input: "@parameter { origin, destination, departure_date, passenger_count, seat_
 Output: "@return \Illuminate\Support\Collection return_type // @return available flight schedules"
 Rules: "//validation"
 What Changed: "Implemented flight search validation, controller endpoint, dynamic available-date calendar per route, service-repository query filtering by route, departure date, seat class, and passenger count, plus per-ticket and total price display in results."
-Commit Message: "feat: enhance flight search user story US 2.1"
+Commit Message: "feat: enhance US 2.1 flight search with dynamic availability and total pricing"
