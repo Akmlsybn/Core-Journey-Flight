@@ -5,6 +5,9 @@
 @section('content')
     @php
         $departureLabel = \Illuminate\Support\Carbon::parse($criteria['departure_date'])->format('d/m/Y');
+        $passengerCount = (int) ($searchParams['passenger_count'] ?? $criteria['passenger_count'] ?? 1);
+        $selectedSeatClass = (string) ($searchParams['seat_class'] ?? $criteria['seat_class'] ?? '');
+        $seatClassLabel = str_replace('_', ' ', $selectedSeatClass);
     @endphp
 
     <div class="space-y-8">
@@ -17,6 +20,11 @@
                     {{ $criteria['destination'] }}
                 </h1>
                 <p class="mt-2 text-slate-400">{{ $departureLabel }}</p>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center rounded-lg bg-sky-500/15 px-2.5 py-1 text-xs font-medium text-sky-200 ring-1 ring-sky-500/25">
+                        Penumpang: {{ $passengerCount }}
+                    </span>
+                </div>
             </div>
             <a
                 href="{{ route('flights.search') }}"
@@ -41,8 +49,8 @@
                 </div>
                 <h2 class="mt-6 text-lg font-semibold text-white">Tidak ada penerbangan</h2>
                 <p class="mx-auto mt-2 max-w-md text-sm text-slate-400">
-                    Untuk rute dan tanggal ini belum ada jadwal di database. Coba tanggal lain sesuai data seed (misalnya 15–17 Mei 2026) atau jalankan ulang
-                    <code class="rounded bg-slate-800 px-1.5 py-0.5 text-xs text-sky-300">php artisan migrate:fresh --seed</code>.
+                    Untuk rute dan tanggal ini belum ada jadwal di database. Coba tanggal lain sesuai data seed
+                    atau jalankan ulang <code class="rounded bg-slate-800 px-1.5 py-0.5 text-xs text-sky-300">php artisan migrate:fresh --seed</code>.
                 </p>
             </div>
         @else
@@ -56,6 +64,8 @@
                             'cancelled' => 'bg-rose-500/15 text-rose-200 ring-rose-500/25',
                         ];
                         $statusClass = $statusColors[$flight->flight_status] ?? 'bg-slate-500/15 text-slate-200 ring-slate-500/25';
+                        $pricePerPax = (float) ($flight->price ?? 0);
+                        $totalPrice = $pricePerPax * max($passengerCount, 1);
                     @endphp
                     <li
                         class="group rounded-2xl border border-white/10 bg-slate-900/50 p-5 shadow-lg shadow-black/20 backdrop-blur-sm transition hover:border-sky-500/25 hover:bg-slate-900/70 sm:p-6"
@@ -80,7 +90,7 @@
                                         </p>
                                         <p class="text-slate-400">{{ $flight->origin }}</p>
                                     </div>
-                                    <div class="hidden h-px flex-1 min-w-[2rem] bg-gradient-to-r from-transparent via-white/20 to-transparent sm:block sm:max-w-[6rem]" aria-hidden="true"></div>
+                                    <div class="hidden h-px min-w-[2rem] flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent sm:block sm:max-w-[6rem]" aria-hidden="true"></div>
                                     <div>
                                         <p class="text-xs uppercase tracking-wider text-slate-500">Tiba</p>
                                         <p class="mt-0.5 font-mono text-lg font-semibold text-white">
@@ -95,28 +105,18 @@
                                         </div>
                                     @endif
                                 </div>
-
-                                @if ($flight->seatClasses->isNotEmpty())
-                                    <div class="flex flex-wrap gap-2 pt-1">
-                                        @foreach ($flight->seatClasses as $seat)
-                                            <span
-                                                class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/60 px-3 py-1.5 text-xs text-slate-300"
-                                            >
-                                                <span class="font-medium capitalize text-sky-300">{{ $seat->seat_class }}</span>
-                                                <span class="text-slate-500">|</span>
-                                                <span>Rp{{ number_format((float) $seat->class_price, 0, ',', '.') }}</span>
-                                                <span class="text-slate-500">{{ $seat->available_seats }}/{{ $seat->seat_capacity }} kursi</span>
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                @endif
                             </div>
 
                             <div class="flex shrink-0 flex-col items-stretch gap-2 border-t border-white/5 pt-4 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-                                <p class="text-xs text-slate-500">Harga dasar</p>
-                                <p class="text-2xl font-bold text-white">
-                                    Rp{{ number_format((float) $flight->base_price, 0, ',', '.') }}
+                                <span class="inline-flex items-center self-start rounded-lg bg-indigo-500/15 px-2.5 py-1 text-xs font-medium text-indigo-200 ring-1 ring-indigo-500/25">
+                                    Kelas Penerbangan: {{ $seatClassLabel ?: 'N/A' }}
+                                </span>
+                                <p class="text-xs text-slate-500">Harga per tiket</p>
+                                <p class="text-xl font-bold text-white">
+                                    Rp{{ number_format($pricePerPax, 0, ',', '.') }} <span class="text-sm font-medium text-slate-400">/ pax</span>
                                 </p>
+                                <p class="text-xs text-slate-500">Total ({{ $passengerCount }} penumpang)</p>
+                                <p class="text-2xl font-bold text-sky-300">Rp{{ number_format($totalPrice, 0, ',', '.') }}</p>
                             </div>
                         </div>
                     </li>

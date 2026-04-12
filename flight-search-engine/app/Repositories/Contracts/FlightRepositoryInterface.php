@@ -27,4 +27,17 @@ interface FlightRepositoryInterface
         string $rangeStart,
         string $rangeEnd
     ): Collection;
+
+    /**
+     * Cari penerbangan tersedia dengan filter ketersediaan kursi dan kelas.
+     *
+     * @return Collection<int, \App\Models\FlightSchedule>
+     */
+    public function searchAvailableFlights(
+        string $origin,
+        string $destination,
+        string $departureDate,
+        int $passengerCount,
+        string $seatClass
+    ): Collection;
 }

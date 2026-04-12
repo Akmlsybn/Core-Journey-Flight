@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 // filepath: app/Http/Controllers/Requests/FlightSearchRequest.php
 
 namespace App\Http\Controllers\Requests;
@@ -36,14 +38,14 @@ class FlightSearchRequest extends FormRequest
                 'required',
                 'string',
                 'size:3',
-                Rule::exists('airports', 'code'),
+                Rule::exists('airports', 'airport_code'),
             ],
             'destination' => [
                 'required',
                 'string',
                 'size:3',
                 'different:origin',
-                Rule::exists('airports', 'code'),
+                Rule::exists('airports', 'airport_code'),
             ],
             'departure_date' => [
                 'required',

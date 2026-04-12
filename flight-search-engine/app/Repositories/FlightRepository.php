@@ -48,4 +48,34 @@ class FlightRepository implements FlightRepositoryInterface
             ->selectRaw('flight_schedules.departure_date as departure_date, MIN(flight_seat_classes.class_price) as min_price')
             ->get();
     }
+
+    public function searchAvailableFlights(
+        string $origin,
+        string $destination,
+        string $departureDate,
+        int $passengerCount,
+        string $seatClass
+    ): Collection {
+        return FlightSchedule::query()
+            ->select('flight_schedules.*')
+            ->selectRaw('flight_seat_classes.class_price as price')
+            ->with([
+                'airline',
+                'route.originAirport',
+                'route.destinationAirport',
+                'seatClasses' => fn ($query) => $query
+                    ->where('seat_class', $seatClass)
+                    ->orderBy('class_price'),
+            ])
+            ->join('flight_seat_classes', 'flight_seat_classes.flight_schedule_id', '=', 'flight_schedules.id')
+            ->where('flight_schedules.origin', $origin)
+            ->where('flight_schedules.destination', $destination)
+            ->whereDate('flight_schedules.departure_date', $departureDate)
+            ->where('flight_seat_classes.seat_class', $seatClass)
+            ->where('flight_seat_classes.available_seats', '>=', $passengerCount)
+            ->distinct()
+            ->orderBy('flight_schedules.departure_time')
+            ->get();
+    }
+
 }
