@@ -28,33 +28,6 @@ Untuk mendukung US 2.2 hingga 2.5, sistem menambahkan 4 tabel baru yang berelasi
 
 ---
 
-```mermaid
-erDiagram
-    FLIGHT_SCHEDULES ||--o{ BOOKINGS : "dipesan"
-    FLIGHT_SEAT_CLASSES ||--o{ BOOKINGS : "dipilih"
-    BOOKINGS ||--o{ PASSENGERS : "mencatat"
-    BOOKINGS ||--o1 PAYMENTS : "memiliki"
-    BOOKINGS ||--o1 TICKETS : "menerbitkan"
-    PASSENGERS ||--o1 TICKETS : "tertera_pada"
-
-    BOOKINGS {
-        string booking_code PK
-        int flight_schedule_id FK
-        int seat_class_id FK
-        decimal total_price
-        string status
-        datetime payment_expired_at
-    }
-
-    PASSENGERS {
-        int id PK
-        int booking_id FK
-        string nik
-        string full_name
-        date date_of_birth
-    }
-```
-
 ## 3. Alur Data (Sequence Diagram)
 
 ```mermaid
