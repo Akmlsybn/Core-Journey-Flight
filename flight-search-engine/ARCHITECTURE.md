@@ -28,6 +28,46 @@ Untuk mendukung US 2.2 hingga 2.5, sistem menambahkan 4 tabel baru yang berelasi
 
 ---
 
+erDiagram
+%% Tabel dari Journey 1
+FLIGHT_SCHEDULES ||--o{ FLIGHT_SEAT_CLASSES : "memiliki"
+
+    %% Hubungan ke Tabel Baru Journey 2
+    FLIGHT_SCHEDULES ||--o{ BOOKINGS : "dipesan"
+    FLIGHT_SEAT_CLASSES ||--o{ BOOKINGS : "dipilih"
+
+    BOOKINGS ||--o{ PASSENGERS : "mencatat"
+    BOOKINGS ||--o1 PAYMENTS : "memiliki"
+    BOOKINGS ||--o1 TICKETS : "menerbitkan"
+
+    BOOKINGS {
+        string booking_code PK
+        int flight_schedule_id FK
+        decimal total_price
+        enum status
+        datetime payment_expired_at
+    }
+
+    PASSENGERS {
+        int id PK
+        int booking_id FK
+        string nik
+        string full_name
+    }
+
+    PAYMENTS {
+        int id PK
+        int booking_id FK
+        string payment_method
+        string status
+    }
+
+    TICKETS {
+        int id PK
+        int booking_id FK
+        string ticket_code
+    }
+
 ## 3. Alur Data (Sequence Diagram)
 
 ```mermaid
