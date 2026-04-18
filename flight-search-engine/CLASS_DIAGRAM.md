@@ -6,28 +6,36 @@ Dokumen ini merinci struktur kelas untuk implementasi US 2.2 hingga 2.5, yang me
 
 ```mermaid
 classDiagram
-    %% Hubungan dengan User Story 2.1
-    FlightSearchController ..> BookingController : Redirect (Pilih Tiket)
+    %% --- LAYER CONTROLLER ---
+    class FlightSearchController {
+        -FlightSearchService $service
+        +show() View
+        +search(FlightSearchRequest $request) Response
+    }
 
-    %% Controller & Request
     class BookingController {
         -BookingService $service
-        +showPassengerForm(scheduleId) View (US 2.2)
-        +storeBooking(BookingRequest $request) Response (US 2.3)
-        +checkout(bookingId) View (US 2.4)
-        +confirmPayment(bookingId) Response (US 2.5)
+        +showPassengerForm(scheduleId) View
+        +storeBooking(BookingRequest $request) Response
+        +checkout(bookingId) View
+        +confirmPayment(bookingId) Response
     }
 
-    class BookingRequest {
-        +rules() array (Validasi NIK/Nama)
+    %% --- LAYER SERVICE & REPOSITORY ---
+    class FlightSearchService {
+        -FlightRepository $repository
+        +search(criteria) array
     }
 
-    %% Service & Repository
     class BookingService {
         -BookingRepository $repository
         +createBooking(data)
-        +validatePaymentTimer(bookingId) (US 2.4)
-        +issueTicket(bookingId) (US 2.5)
+        +validatePaymentTimer(id)
+        +issueTicket(id)
+    }
+
+    class FlightRepository {
+        +search(origin, destination, date, class) Collection
     }
 
     class BookingRepository {
@@ -35,21 +43,39 @@ classDiagram
         +findWithDetails(id)
     }
 
-    %% Models
+    %% --- LAYER MODELS (DATABASE) ---
+    class FlightSchedule {
+        -int id
+        -string flight_number
+        -date departure_date
+        +airline()
+        +seatClasses()
+    }
+
     class Booking {
+        -int id
         -string booking_code
-        -enum status
+        -string status
         -datetime payment_expired_at
     }
+
     class Passenger {
+        -int id
         -string nik
         -string full_name
     }
 
-    %% Relations
-    BookingController --> BookingRequest : validates
-    BookingController --> BookingService : delegates
-    BookingService --> BookingRepository : calls
+    %% --- RELATIONSHIPS ---
+    FlightSearchController --> FlightSearchService : uses
+    FlightSearchService --> FlightRepository : uses
+
+    %% Alur Utama: Dari Hasil Pencarian ke Form Booking
+    FlightSearchController ..> BookingController : Redirect (User memilih tiket)
+
+    BookingController --> BookingService : uses
+    BookingService --> BookingRepository : uses
+
     BookingRepository --> Booking : manages
     Booking "1" -- "*" Passenger : contains
+    Booking "*" -- "1" FlightSchedule : related to
 ```
