@@ -11,10 +11,7 @@ class Booking extends Model
     protected $fillable = [
         'flight_schedule_id',
         'booking_code',
-        'full_name',
-        'nik',
-        'seat_class',
-        'passenger_count',
+        'total_passengers',
         'ancillary_services',
         'status',
         'total_price',
@@ -27,11 +24,25 @@ class Booking extends Model
         'paid_at' => 'datetime',
     ];
 
+    /**
+     * Relasi: Booking terhubung ke FlightSchedule
+     */
     public function flightSchedule(): BelongsTo
     {
         return $this->belongsTo(FlightSchedule::class);
     }
 
+    /**
+     * Relasi: Booking memiliki banyak Passengers
+     */
+    public function passengers(): HasMany
+    {
+        return $this->hasMany(Passenger::class);
+    }
+
+    /**
+     * Relasi: Booking memiliki banyak Tickets
+     */
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);
