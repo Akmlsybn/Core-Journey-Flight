@@ -1,0 +1,11 @@
+Prompt: "
+[1] After that, enhance the system functionality to be more comprehensive with the following technical details: on resources/views/flights/results.blade.php, add a sidebar filter component to narrow down schedules based on departure and arrival time ranges. On the resources/views/flights/show.blade.php page, revamp the flight detail view to mimic Traveloka's aesthetic, displaying aircraft facilities and route details elegantly; for resources/views/bookings/create.blade.php, add a mandatory input field for "National Identity Number (NIK)" and include a concise ancillary services section with checkboxes for "Travel Insurance" and "Extra Baggage". Implement a language switcher (ID/EN) in the header component using Laravel sessions so users can choose their interface language. Finally, update the BookingController to handle these filter data and app/Http/Requests/StoreBookingRequest.php to validate the NIK (minimum 16 digits) and ancillary service selections. All implementations must remain consistent using Tailwind CSS according to skills.md standards and be restricted only to the View, Controller (data passing), and Request layers to prevent conflicts with the core backend logic.
+"
+•Context File: "resources/views/bookings/create.blade.php; app/Http/Requests/StoreBookingRequest.php; app/Http/Controllers/BookingController.php; resources/lang/id.json; resources/lang/en.json"
+Skills: ".github/copilot/Skills.md"
+Task: Generate code for the following user story: "As a user (passenger), I want to input complete passenger data so that the booking can be processed accurately and the ticket is valid for travel."
+Input: @parameter "{ full_name, nik, date_of_birth, phone, email, ancillary_services[], seat_class, passenger_count }"
+Output: @return type_data return_type //@return Boolean true
+• Rules: //validation
+• What Changed: "Implemented passenger data-entry flow with mandatory NIK validation (minimum 16 digits), ancillary services options, and strict request-level validation messages. The booking form preserves selected flight context and supports continuation to checkout/payment placeholder only when validation succeeds. Invalid or incomplete input is returned with explicit field-level feedback to keep booking data accurate."
+Commit Message: "Upload FE, Halaman Form Penumpang, & Validasi Input"
