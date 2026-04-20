@@ -118,6 +118,17 @@
     </style>
 </head>
 <body>
+    @php
+        $passengers = $booking->passengers->values();
+        $tickets = $booking->tickets->values();
+        $paymentMethodLabel = match ((string) $booking->payment_method) {
+            'bank_transfer' => __('payment_bank_transfer'),
+            'e_wallet' => __('payment_e_wallet'),
+            'credit_card' => __('payment_credit_card'),
+            default => '-',
+        };
+        $primaryTicket = $tickets->first();
+    @endphp
     <div class="container">
         <div class="header">
             <h1>{{ __('e_ticket') }}</h1>
@@ -127,7 +138,7 @@
         <div class="content">
             <div class="section">
                 <div class="ticket-number">
-                    {{ $booking->tickets->first()?->ticket_number ?? 'N/A' }}
+                    {{ $primaryTicket?->ticket_number ?? 'N/A' }}
                 </div>
             </div>
 
@@ -159,22 +170,57 @@
                     <div class="info-grid">
                         <div class="info-item">
                             <div class="info-label">{{ __('full_name') }}</div>
-                            <div class="info-value">{{ $booking->full_name }}</div>
+                            <div class="info-value">{{ $passengers->first()?->name ?? '-' }}</div>
                         </div>
                         <div class="info-item">
                             <div class="info-label">{{ __('nik') }}</div>
-                            <div class="info-value">{{ $booking->nik }}</div>
+                            <div class="info-value">{{ $passengers->first()?->id_number ?? '-' }}</div>
                         </div>
                         <div class="info-item">
                             <div class="info-label">{{ __('seat_class') }}</div>
-                            <div class="info-value">{{ \Illuminate\Support\Str::of($booking->seat_class)->replace('_', ' ')->title() }}</div>
+                            <div class="info-value">{{ \Illuminate\Support\Str::of((string) ($passengers->first()?->seat_class ?? '-'))->replace('_', ' ')->title() }}</div>
                         </div>
                         <div class="info-item">
                             <div class="info-label">{{ __('seat_number') }}</div>
-                            <div class="info-value">{{ $booking->tickets->first()?->seat_number ?? 'TBA' }}</div>
+                            <div class="info-value">{{ $primaryTicket?->seat_number ?? 'TBA' }}</div>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">{{ __('passenger_list') }}</h2>
+                @foreach ($passengers as $index => $passenger)
+                    @php
+                        $ticket = $tickets->get($index);
+                    @endphp
+                    <div class="info-grid" style="margin-bottom: 12px;">
+                        <div class="info-item">
+                            <div class="info-label">{{ __('passenger') }} #{{ $index + 1 }}</div>
+                            <div class="info-value">{{ $passenger->name }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">{{ __('nik') }}</div>
+                            <div class="info-value">{{ $passenger->id_number }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">{{ __('seat_class') }}</div>
+                            <div class="info-value">{{ \Illuminate\Support\Str::of((string) $passenger->seat_class)->replace('_', ' ')->title() }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">{{ __('ticket_number') }}</div>
+                            <div class="info-value">{{ $ticket?->ticket_number ?? 'N/A' }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">{{ __('seat_number') }}</div>
+                            <div class="info-value">{{ $ticket?->seat_number ?? 'TBA' }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">{{ __('qr_code') }}</div>
+                            <div class="info-value" style="font-family: 'Courier New', monospace;">{{ $ticket?->qr_code ?? '-' }}</div>
+                        </div>
+                    </div>
+                @endforeach
             </div>
 
             <div class="section">
@@ -220,13 +266,17 @@
                         <div class="info-label">{{ __('payment_status') }}</div>
                         <div class="info-value">{{ __('paid') }}</div>
                     </div>
+                    <div class="info-item">
+                        <div class="info-label">{{ __('payment_method') }}</div>
+                        <div class="info-value">{{ $paymentMethodLabel }}</div>
+                    </div>
                 </div>
             </div>
 
             <div class="barcode">
                 |||||||||||||||||||||||||
                 <br>
-                {{ $booking->tickets->first()?->ticket_number ?? $booking->booking_code }}
+                {{ $primaryTicket?->qr_code ?? $booking->booking_code }}
                 <br>
                 |||||||||||||||||||||||||
             </div>

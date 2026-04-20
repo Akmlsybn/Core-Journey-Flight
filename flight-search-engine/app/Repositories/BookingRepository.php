@@ -122,12 +122,38 @@ class BookingRepository implements BookingRepositoryInterface
     }
 
     /**
+     * Tambahkan kembali kursi saat booking dibatalkan.
+     */
+    public function increaseAvailableSeats(
+        int $flightScheduleId,
+        string $seatClass,
+        int $passengerCount
+    ): bool {
+        $affected = FlightSeatClass::query()
+            ->where('flight_schedule_id', $flightScheduleId)
+            ->where('seat_class', $seatClass)
+            ->increment('available_seats', $passengerCount);
+
+        return $affected > 0;
+    }
+
+    /**
      * Update status booking.
      */
-    public function updateBookingStatus(int $bookingId, string $status): bool
+    public function updateBookingStatus(int $bookingId, string $status, ?string $paymentMethod = null): bool
     {
+        $payload = ['status' => $status];
+        if ($status === 'paid') {
+            $payload['paid_at'] = now();
+            $payload['payment_method'] = $paymentMethod;
+        }
+
+        if ($status === 'cancelled') {
+            $payload['cancelled_at'] = now();
+        }
+
         return Booking::query()
             ->where('id', $bookingId)
-            ->update(['status' => $status]) > 0;
+            ->update($payload) > 0;
     }
 }

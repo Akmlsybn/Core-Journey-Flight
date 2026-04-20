@@ -3,19 +3,26 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Mail\BookingConfirmedEticketMail;
 use App\Http\Requests\StoreBookingRequest;
 use App\Models\Booking;
 use App\Models\FlightSchedule;
 use App\Services\BookingService;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class BookingController extends Controller
 {
+    public function __construct(
+        private readonly BookingService $bookingService
+    ) {
+    }
+
     public function showFlight(Request $request, FlightSchedule $flightSchedule): View
     {
         $this->applyLocale($request);
@@ -107,16 +114,18 @@ class BookingController extends Controller
             'arrival_slots' => $validated['arrival_slots'] ?? [],
         ];
 
-        // Create booking
-        $bookingService = new BookingService();
-        $booking = $bookingService->createBooking([
-            'flight_schedule_id' => $flightSchedule->id,
-            'full_name' => $validated['full_name'],
-            'nik' => $validated['nik'],
-            'seat_class' => $validated['seat_class'],
-            'passenger_count' => $validated['passenger_count'],
-            'ancillary_services' => $validated['ancillary_services'] ?? [],
-        ]);
+        try {
+            $booking = $this->bookingService->createBooking([
+                'flight_schedule_id' => $flightSchedule->id,
+                'customer_email' => $validated['booking_email'],
+                'ancillary_services' => $validated['ancillary_services'] ?? [],
+                'passengers' => $this->buildPassengersPayload($validated),
+            ]);
+        } catch (\Throwable $exception) {
+            return redirect()->back()->withErrors([
+                'booking' => $exception->getMessage(),
+            ])->withInput();
+        }
 
         return redirect()
             ->route('bookings.payment', [
@@ -135,7 +144,7 @@ class BookingController extends Controller
             ->with('booking_id', $booking->id);
     }
 
-    public function payment(Request $request, FlightSchedule $flightSchedule): View
+    public function payment(Request $request, FlightSchedule $flightSchedule): View|RedirectResponse
     {
         $this->applyLocale($request);
 
@@ -165,13 +174,42 @@ class BookingController extends Controller
             ], $timeFilters)
         );
 
+        $bookingIdQuery = $request->query('booking_id');
+        $bookingId = is_numeric($bookingIdQuery)
+            ? (int) $bookingIdQuery
+            : (int) $request->session()->get('booking_id', 0);
+
+        $booking = $bookingId > 0 ? Booking::query()->find($bookingId) : null;
+
+        if (!$booking || (int) $booking->flight_schedule_id !== (int) $flightSchedule->id) {
+            return redirect()->to($backToFormUrl)->withErrors([
+                'payment' => __('booking_not_found'),
+            ]);
+        }
+
+        if ($booking->status === 'cancelled') {
+            return redirect()->to($backToFormUrl)->withErrors([
+                'payment' => __('checkout_expired'),
+            ]);
+        }
+
+        if ($this->bookingService->cancelExpiredBooking((int) $booking->id)) {
+            return redirect()->to($backToFormUrl)->withErrors([
+                'payment' => __('checkout_expired'),
+            ]);
+        }
+
         return view('bookings.payment', [
             'flight' => $flightSchedule,
             'backToFormUrl' => $backToFormUrl,
+            'bookingId' => (int) $booking->id,
+            'paymentExpiresAt' => $booking->payment_expires_at?->toIso8601String(),
+            'paymentReference' => $this->buildPaymentReference($booking),
+            'gatewaySignature' => $this->buildGatewaySignature($booking),
         ]);
     }
 
-    public function confirmPayment(Request $request): \Illuminate\View\View|bool
+    public function confirmPayment(Request $request): View|RedirectResponse
     {
         $this->applyLocale($request);
 
@@ -183,17 +221,54 @@ class BookingController extends Controller
         $request->validate([
             'booking_id' => 'required|integer|exists:bookings,id',
             'payment_status' => 'required|string|in:successful,failed',
-            'payment_method' => 'required|string',
+            'payment_method' => 'required|string|in:bank_transfer,e_wallet,credit_card',
+            'payment_reference' => 'required|string|max:80',
+            'gateway_signature' => 'required|string|size:64',
         ]);
 
-        $bookingService = new BookingService();
-        $success = $bookingService->confirmPayment($bookingId, $paymentStatus, $paymentMethod);
-
-        if (!$success) {
-            return false; // Or redirect to error page
+        $bookingForVerification = Booking::query()->find((int) $bookingId);
+        if (!$bookingForVerification || !$this->verifyGatewaySignature($bookingForVerification, (string) $request->input('payment_reference'), (string) $request->input('gateway_signature'))) {
+            return redirect()->back()->withErrors([
+                'payment' => __('payment_verification_failed'),
+            ])->withInput();
         }
 
-        $booking = \App\Models\Booking::with('flightSchedule.airline')->find($bookingId);
+        $success = $this->bookingService->confirmPayment((int) $bookingId, (string) $paymentStatus, (string) $paymentMethod);
+
+        if (!$success) {
+            return redirect()->back()->withErrors([
+                'payment' => __('payment_failed_try_again'),
+            ])->withInput();
+        }
+
+        $booking = \App\Models\Booking::with([
+            'flightSchedule.airline',
+            'passengers' => static fn ($query) => $query->orderBy('id'),
+            'tickets' => static fn ($query) => $query->orderBy('id'),
+        ])->find($bookingId);
+
+        if (!$booking) {
+            return redirect()->route('flights.search')->withErrors([
+                'payment' => __('booking_not_found'),
+            ]);
+        }
+
+        if ($booking->customer_email) {
+            try {
+                $pdfBinary = app('dompdf.wrapper')->loadView('pdf.eticket', ['booking' => $booking])->output();
+
+                Mail::to($booking->customer_email)->send(
+                    new BookingConfirmedEticketMail($booking, $pdfBinary)
+                );
+            } catch (\Throwable $throwable) {
+                Log::warning('Failed sending e-ticket email', [
+                    'booking_id' => $booking->id,
+                    'booking_code' => $booking->booking_code,
+                    'email' => $booking->customer_email,
+                    'error' => $throwable->getMessage(),
+                ]);
+            }
+        }
 
         return view('bookings.success', [
             'booking' => $booking,
@@ -209,9 +284,13 @@ class BookingController extends Controller
             abort(403, 'Booking not paid');
         }
 
-        $booking->load(['flightSchedule.airline', 'tickets']);
+        $booking->load([
+            'flightSchedule.airline',
+            'passengers' => static fn ($query) => $query->orderBy('id'),
+            'tickets' => static fn ($query) => $query->orderBy('id'),
+        ]);
 
-        $pdf = Pdf::loadView('pdf.eticket', [
+        $pdf = app('dompdf.wrapper')->loadView('pdf.eticket', [
             'booking' => $booking,
         ]);
 
@@ -286,5 +365,50 @@ class BookingController extends Controller
         }
 
         return false;
+    }
+
+    private function buildPassengersPayload(array $validated): array
+    {
+        $passengerCount = max(1, (int) ($validated['passenger_count'] ?? 1));
+        $passengerNames = $validated['passenger_names'] ?? [];
+        $passengerNiks = $validated['passenger_niks'] ?? [];
+        $seatClass = (string) ($validated['seat_class'] ?? 'economy');
+
+        $passengers = [];
+        for ($i = 1; $i <= $passengerCount; $i++) {
+            $fallbackName = __('passenger') . ' ' . $i;
+            $passengers[] = [
+                'name' => trim((string) ($passengerNames[$i - 1] ?? $fallbackName)),
+                'id_number' => trim((string) ($passengerNiks[$i - 1] ?? '')),
+                'seat_class' => $seatClass,
+            ];
+        }
+
+        return $passengers;
+    }
+
+    private function buildPaymentReference(Booking $booking): string
+    {
+        return 'PAY-' . $booking->booking_code;
+    }
+
+    private function buildGatewaySignature(Booking $booking): string
+    {
+        $payload = implode('|', [
+            $booking->id,
+            $booking->booking_code,
+            $this->buildPaymentReference($booking),
+        ]);
+
+        return hash_hmac('sha256', $payload, (string) config('app.key'));
+    }
+
+    private function verifyGatewaySignature(Booking $booking, string $paymentReference, string $signature): bool
+    {
+        if ($paymentReference !== $this->buildPaymentReference($booking)) {
+            return false;
+        }
+
+        return hash_equals($this->buildGatewaySignature($booking), $signature);
     }
 }

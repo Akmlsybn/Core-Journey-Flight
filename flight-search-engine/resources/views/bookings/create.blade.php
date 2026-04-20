@@ -11,6 +11,9 @@
         $totalEstimatedPrice = (float) ($seatPrice ?? 0) * max((int) $passengerCount, 1);
         $timeFilters = $timeFilters ?? ['departure_slots' => [], 'arrival_slots' => []];
         $selectedAncillaryServices = old('ancillary_services', []);
+        $bookingEmail = old('booking_email', '');
+        $passengerNames = old('passenger_names', array_fill(0, max((int) $passengerCount, 1), ''));
+        $passengerNiks = old('passenger_niks', array_fill(0, max((int) $passengerCount, 1), ''));
     @endphp
 
     <div class="mx-auto max-w-4xl space-y-8">
@@ -62,8 +65,13 @@
                     {{ session('booking_form_success') }}
                 </div>
             @endif
+            @error('booking')
+                <div class="mb-5 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                    {{ $message }}
+                </div>
+            @enderror
 
-            <form method="POST" action="{{ route('bookings.store', ['flightSchedule' => $flight->id]) }}" class="space-y-5">
+            <form method="POST" action="{{ route('bookings.store', ['flightSchedule' => $flight->id], false) }}" class="space-y-5">
                 @csrf
                 <input type="hidden" name="seat_class" value="{{ old('seat_class', $seatClass) }}">
                 <input type="hidden" name="passenger_count" value="{{ old('passenger_count', $passengerCount) }}">
@@ -79,36 +87,66 @@
 
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div class="space-y-2 sm:col-span-2">
-                        <label for="full_name" class="block text-sm font-medium text-slate-200">{{ __('full_name') }}</label>
+                        <label for="booking_email" class="block text-sm font-medium text-slate-200">{{ __('booking_email') }}</label>
                         <input
-                            type="text"
-                            id="full_name"
-                            name="full_name"
-                            value="{{ old('full_name') }}"
-                            placeholder="Masukkan nama lengkap sesuai identitas"
-                            autocomplete="name"
-                            class="block w-full rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white shadow-inner placeholder:text-slate-500 focus:border-sky-500/50 focus:outline-none focus:ring-2 focus:ring-sky-500/40 @error('full_name') border-rose-400/60 focus:border-rose-400/70 focus:ring-rose-400/40 @enderror"
+                            type="email"
+                            id="booking_email"
+                            name="booking_email"
+                            value="{{ $bookingEmail }}"
+                            placeholder="{{ __('booking_email_placeholder') }}"
+                            autocomplete="email"
+                            class="block w-full rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white shadow-inner placeholder:text-slate-500 focus:border-sky-500/50 focus:outline-none focus:ring-2 focus:ring-sky-500/40 @error('booking_email') border-rose-400/60 focus:border-rose-400/70 focus:ring-rose-400/40 @enderror"
                         >
-                        @error('full_name')
+                        @error('booking_email')
                             <p class="text-sm text-rose-300">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div class="space-y-2 sm:col-span-2">
-                        <label for="nik" class="block text-sm font-medium text-slate-200">{{ __('nik_label') }}</label>
-                        <input
-                            type="text"
-                            id="nik"
-                            name="nik"
-                            value="{{ old('nik') }}"
-                            placeholder="Masukkan NIK minimal 16 digit"
-                            inputmode="numeric"
-                            minlength="16"
-                            maxlength="20"
-                            autocomplete="off"
-                            class="block w-full rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white shadow-inner placeholder:text-slate-500 focus:border-sky-500/50 focus:outline-none focus:ring-2 focus:ring-sky-500/40 @error('nik') border-rose-400/60 focus:border-rose-400/70 focus:ring-rose-400/40 @enderror"
-                        >
-                        @error('nik')
+                        <p class="block text-sm font-medium text-slate-200">{{ __('passenger_names_heading') }}</p>
+                        <p class="text-xs text-slate-400">{{ __('passenger_names_hint') }}</p>
+                    </div>
+
+                    @for ($i = 0; $i < max((int) $passengerCount, 1); $i++)
+                        <div class="space-y-2 sm:col-span-2">
+                            <label for="passenger_names_{{ $i }}" class="block text-sm font-medium text-slate-200">{{ __('passenger_name_index', ['number' => $i + 1]) }}</label>
+                            <input
+                                type="text"
+                                id="passenger_names_{{ $i }}"
+                                name="passenger_names[]"
+                                value="{{ $passengerNames[$i] ?? '' }}"
+                                placeholder="{{ __('passenger_name_placeholder') }}"
+                                autocomplete="name"
+                                class="block w-full rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white shadow-inner placeholder:text-slate-500 focus:border-sky-500/50 focus:outline-none focus:ring-2 focus:ring-sky-500/40 @error('passenger_names.' . $i) border-rose-400/60 focus:border-rose-400/70 focus:ring-rose-400/40 @enderror"
+                            >
+                            @error('passenger_names.' . $i)
+                                <p class="text-sm text-rose-300">{{ $message }}</p>
+                            @enderror
+
+                            <label for="passenger_niks_{{ $i }}" class="mt-3 block text-sm font-medium text-slate-200">{{ __('passenger_nik_index', ['number' => $i + 1]) }}</label>
+                            <input
+                                type="text"
+                                id="passenger_niks_{{ $i }}"
+                                name="passenger_niks[]"
+                                value="{{ $passengerNiks[$i] ?? '' }}"
+                                placeholder="{{ __('passenger_nik_placeholder') }}"
+                                inputmode="numeric"
+                                minlength="16"
+                                maxlength="16"
+                                autocomplete="off"
+                                class="block w-full rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white shadow-inner placeholder:text-slate-500 focus:border-sky-500/50 focus:outline-none focus:ring-2 focus:ring-sky-500/40 @error('passenger_niks.' . $i) border-rose-400/60 focus:border-rose-400/70 focus:ring-rose-400/40 @enderror"
+                            >
+                            @error('passenger_niks.' . $i)
+                                <p class="text-sm text-rose-300">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @endfor
+
+                    <div class="space-y-2 sm:col-span-2">
+                        @error('passenger_names')
+                            <p class="text-sm text-rose-300">{{ $message }}</p>
+                        @enderror
+                        @error('passenger_niks')
                             <p class="text-sm text-rose-300">{{ $message }}</p>
                         @enderror
                     </div>

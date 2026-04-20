@@ -69,9 +69,11 @@ class BookingService
         $bookingData = [
             'flight_schedule_id' => $flightScheduleId,
             'booking_code' => $bookingCode,
+            'customer_email' => $data['customer_email'] ?? null,
             'total_passengers' => $passengerCount,
             'ancillary_services' => $data['ancillary_services'] ?? [],
             'status' => 'pending',
+            'payment_expires_at' => now()->addMinutes(30),
             'total_price' => $totalPrice,
         ];
 
@@ -86,12 +88,21 @@ class BookingService
     {
         $booking = $this->bookingRepository->getBookingWithRelations($bookingId);
 
-        if (!$booking || $booking->status !== 'pending' || $paymentStatus !== 'successful') {
+        if (!$booking || $booking->status !== 'pending') {
+            return false;
+        }
+
+        if ($this->isBookingExpired($booking)) {
+            $this->cancelExpiredBooking($bookingId);
+            return false;
+        }
+
+        if ($paymentStatus !== 'successful') {
             return false;
         }
 
         // Update status menjadi paid
-        $this->bookingRepository->updateBookingStatus($bookingId, 'paid');
+        $this->bookingRepository->updateBookingStatus($bookingId, 'paid', $paymentMethod);
 
         // Reload booking dan generate ticket
         $booking = $this->bookingRepository->getBookingWithRelations($bookingId);
@@ -115,10 +126,46 @@ class BookingService
             Ticket::create([
                 'booking_id' => $booking->id,
                 'ticket_number' => $this->generateTicketNumber(),
+                'qr_code' => $this->generateQrCodeToken(),
                 'passenger_name' => $passenger->name,
                 'seat_number' => $this->assignSeatNumber($passenger->seat_class),
             ]);
         }
+    }
+
+    /**
+     * Batalkan booking pending yang sudah melewati batas waktu pembayaran.
+     */
+    public function cancelExpiredBooking(int $bookingId): bool
+    {
+        $booking = $this->bookingRepository->getBookingWithRelations($bookingId);
+
+        if (!$booking || $booking->status !== 'pending' || !$this->isBookingExpired($booking)) {
+            return false;
+        }
+
+        $seatClass = (string) optional($booking->passengers->first())->seat_class;
+        if ($seatClass !== '') {
+            $this->bookingRepository->increaseAvailableSeats(
+                (int) $booking->flight_schedule_id,
+                $seatClass,
+                (int) $booking->total_passengers
+            );
+        }
+
+        return $this->bookingRepository->updateBookingStatus($bookingId, 'cancelled');
+    }
+
+    /**
+     * Cek apakah booking melewati tenggat waktu checkout.
+     */
+    public function isBookingExpired(Booking $booking): bool
+    {
+        if (!$booking->payment_expires_at) {
+            return false;
+        }
+
+        return now()->greaterThanOrEqualTo($booking->payment_expires_at);
     }
 
     /**
@@ -144,6 +191,18 @@ class BookingService
         } while (Ticket::where('ticket_number', $number)->exists());
 
         return $number;
+    }
+
+    /**
+     * Generate token QR unik untuk tiap tiket.
+     */
+    private function generateQrCodeToken(): string
+    {
+        do {
+            $token = 'QR-' . now()->format('YmdHis') . '-' . strtoupper(Str::random(8));
+        } while (Ticket::where('qr_code', $token)->exists());
+
+        return $token;
     }
 
     /**
@@ -206,6 +265,10 @@ class BookingService
     {
         if (empty($data['flight_schedule_id'])) {
             throw new \InvalidArgumentException('flight_schedule_id adalah required');
+        }
+
+        if (empty($data['customer_email']) || !filter_var((string) $data['customer_email'], FILTER_VALIDATE_EMAIL)) {
+            throw new \InvalidArgumentException('customer_email wajib diisi dengan format email valid');
         }
 
         if (empty($data['passengers']) || !is_array($data['passengers'])) {

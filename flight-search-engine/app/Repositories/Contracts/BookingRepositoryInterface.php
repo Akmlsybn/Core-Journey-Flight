@@ -77,6 +77,15 @@ interface BookingRepositoryInterface
     ): bool;
 
     /**
+     * Tambah kembali kursi saat booking dibatalkan.
+     */
+    public function increaseAvailableSeats(
+        int $flightScheduleId,
+        string $seatClass,
+        int $passengerCount
+    ): bool;
+
+    /**
      * Update status booking.
      *
      * @param int $bookingId Booking ID
@@ -84,5 +93,5 @@ interface BookingRepositoryInterface
      *
      * @return bool
      */
-    public function updateBookingStatus(int $bookingId, string $status): bool;
+    public function updateBookingStatus(int $bookingId, string $status, ?string $paymentMethod = null): bool;
 }

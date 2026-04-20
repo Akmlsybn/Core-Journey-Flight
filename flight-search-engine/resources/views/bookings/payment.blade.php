@@ -10,28 +10,51 @@
             <p class="mt-3 text-sm text-slate-300">
                 {{ __('payment_placeholder_desc') }}
             </p>
+            @error('payment')
+                <div class="mt-5 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                    {{ $message }}
+                </div>
+            @enderror
             @if (session('booking_form_success'))
                 <div class="mt-5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
                     {{ session('booking_form_success') }}
                 </div>
             @endif
 
+            <div class="mt-5 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                <p class="font-semibold">{{ __('checkout_timer_title') }}</p>
+                <p class="mt-1">{{ __('checkout_timer_desc') }}</p>
+                <p id="checkout-countdown" class="mt-2 text-xl font-bold text-amber-300" data-expire-at="{{ $paymentExpiresAt ?? '' }}">--:--</p>
+            </div>
+
             <div class="mt-6">
-                <form method="POST" action="{{ route('bookings.confirm-payment') }}" class="space-y-4">
+                <form method="POST" action="{{ route('bookings.confirm-payment', [], false) }}" class="space-y-4">
                     @csrf
-                    <input type="hidden" name="booking_id" value="{{ session('booking_id') }}">
+                    <input type="hidden" name="booking_id" value="{{ old('booking_id', $bookingId ?? session('booking_id')) }}">
                     <input type="hidden" name="payment_status" value="successful">
-                    <input type="hidden" name="payment_method" value="demo">
+                    <input type="hidden" name="payment_reference" value="{{ old('payment_reference', $paymentReference ?? '') }}">
+                    <input type="hidden" name="gateway_signature" value="{{ old('gateway_signature', $gatewaySignature ?? '') }}">
 
                     <div class="rounded-xl border border-white/10 bg-slate-950/60 p-4">
                         <p class="text-sm font-medium text-white">{{ __('payment_method') }}</p>
-                        <p class="mt-1 text-xs text-slate-400">{{ __('demo_payment_note') }}</p>
-                        <div class="mt-3">
+                        <p class="mt-1 text-xs text-slate-400">{{ __('payment_method_options_desc') }}</p>
+                        <div class="mt-3 space-y-2">
                             <div class="flex items-center gap-2">
-                                <input type="radio" id="demo_payment" name="payment_method" value="demo" checked class="h-4 w-4 text-sky-500">
-                                <label for="demo_payment" class="text-sm text-slate-200">{{ __('demo_payment') }}</label>
+                                <input type="radio" id="bank_transfer" name="payment_method" value="bank_transfer" @checked(old('payment_method', 'bank_transfer') === 'bank_transfer') class="h-4 w-4 text-sky-500">
+                                <label for="bank_transfer" class="text-sm text-slate-200">{{ __('payment_bank_transfer') }}</label>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="radio" id="e_wallet" name="payment_method" value="e_wallet" @checked(old('payment_method') === 'e_wallet') class="h-4 w-4 text-sky-500">
+                                <label for="e_wallet" class="text-sm text-slate-200">{{ __('payment_e_wallet') }}</label>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="radio" id="credit_card" name="payment_method" value="credit_card" @checked(old('payment_method') === 'credit_card') class="h-4 w-4 text-sky-500">
+                                <label for="credit_card" class="text-sm text-slate-200">{{ __('payment_credit_card') }}</label>
                             </div>
                         </div>
+                        @error('payment_method')
+                            <p class="mt-2 text-sm text-rose-300">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -52,4 +75,45 @@
             </div>
         </section>
     </div>
+
+    <script>
+        (function () {
+            var countdownEl = document.getElementById('checkout-countdown');
+            if (!countdownEl) {
+                return;
+            }
+
+            var expireAtRaw = countdownEl.getAttribute('data-expire-at');
+            if (!expireAtRaw) {
+                countdownEl.textContent = '--:--';
+                return;
+            }
+
+            var expireAt = new Date(expireAtRaw).getTime();
+            if (Number.isNaN(expireAt)) {
+                countdownEl.textContent = '--:--';
+                return;
+            }
+
+            var updateCountdown = function () {
+                var now = Date.now();
+                var remainingMs = expireAt - now;
+
+                if (remainingMs <= 0) {
+                    countdownEl.textContent = '00:00';
+                    window.location.reload();
+                    return;
+                }
+
+                var totalSeconds = Math.floor(remainingMs / 1000);
+                var minutes = Math.floor(totalSeconds / 60);
+                var seconds = totalSeconds % 60;
+
+                countdownEl.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+            };
+
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        }());
+    </script>
 @endsection
