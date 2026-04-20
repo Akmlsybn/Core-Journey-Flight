@@ -1,6 +1,6 @@
 ---
 name: laravel-php-flight-booking
-description: "Standard coding practices for Laravel MVC Flight Booking & E-Ticket - Kelompok 4."
+description: "Standard coding practices for Laravel MVC Flight Booking & E-Ticket - Kelompok 13."
 ---
 
 # Laravel with PHP Best Practices (Flight Booking System)
