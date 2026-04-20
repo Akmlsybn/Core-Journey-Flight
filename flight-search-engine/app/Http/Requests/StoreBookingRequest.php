@@ -25,6 +25,16 @@ class StoreBookingRequest extends FormRequest
             $passengerNiks = [];
         }
 
+        $passengerDobs = $this->input('passenger_dobs', []);
+        if (!is_array($passengerDobs)) {
+            $passengerDobs = [];
+        }
+
+        $passengerPhones = $this->input('passenger_phones', []);
+        if (!is_array($passengerPhones)) {
+            $passengerPhones = [];
+        }
+
         $this->merge([
             'passenger_names' => array_values(array_map(
                 static fn (mixed $name): string => trim((string) $name),
@@ -33,6 +43,14 @@ class StoreBookingRequest extends FormRequest
             'passenger_niks' => array_values(array_map(
                 static fn (mixed $nik): string => trim((string) $nik),
                 $passengerNiks
+            )),
+            'passenger_dobs' => array_values(array_map(
+                static fn (mixed $dob): string => trim((string) $dob),
+                $passengerDobs
+            )),
+            'passenger_phones' => array_values(array_map(
+                static fn (mixed $phone): string => trim((string) $phone),
+                $passengerPhones
             )),
             'seat_class' => strtolower(trim((string) $this->input('seat_class'))),
             'booking_email' => strtolower(trim((string) $this->input('booking_email'))),
@@ -53,6 +71,10 @@ class StoreBookingRequest extends FormRequest
             'passenger_names.*' => ['required', 'string', 'min:3', 'max:120'],
             'passenger_niks' => ['required', 'array', 'size:' . $expectedPassengerCount],
             'passenger_niks.*' => ['required', 'digits:16'],
+            'passenger_dobs' => ['required', 'array', 'size:' . $expectedPassengerCount],
+            'passenger_dobs.*' => ['required', 'date', 'before:today'],
+            'passenger_phones' => ['required', 'array', 'size:' . $expectedPassengerCount],
+            'passenger_phones.*' => ['required', 'string', 'min:10', 'max:20', 'regex:/^[0-9+\-\s()]+$/'],
             'booking_email' => ['required', 'email:rfc'],
             'departure_slots' => ['nullable', 'array'],
             'departure_slots.*' => [Rule::in(['dawn', 'morning', 'afternoon', 'evening'])],
@@ -86,6 +108,19 @@ class StoreBookingRequest extends FormRequest
             'passenger_niks.size' => 'Jumlah NIK penumpang harus sesuai jumlah penumpang.',
             'passenger_niks.*.required' => 'NIK penumpang wajib diisi.',
             'passenger_niks.*.digits' => 'NIK penumpang harus tepat 16 digit angka.',
+            'passenger_dobs.required' => 'Tanggal lahir penumpang wajib diisi.',
+            'passenger_dobs.array' => 'Format tanggal lahir penumpang tidak valid.',
+            'passenger_dobs.size' => 'Jumlah tanggal lahir penumpang harus sesuai jumlah penumpang.',
+            'passenger_dobs.*.required' => 'Tanggal lahir penumpang wajib diisi.',
+            'passenger_dobs.*.date' => 'Tanggal lahir penumpang harus berupa tanggal yang valid.',
+            'passenger_dobs.*.before' => 'Tanggal lahir penumpang harus sebelum hari ini.',
+            'passenger_phones.required' => 'Nomor telepon penumpang wajib diisi.',
+            'passenger_phones.array' => 'Format nomor telepon penumpang tidak valid.',
+            'passenger_phones.size' => 'Jumlah nomor telepon penumpang harus sesuai jumlah penumpang.',
+            'passenger_phones.*.required' => 'Nomor telepon penumpang wajib diisi.',
+            'passenger_phones.*.min' => 'Nomor telepon penumpang minimal 10 karakter.',
+            'passenger_phones.*.max' => 'Nomor telepon penumpang maksimal 20 karakter.',
+            'passenger_phones.*.regex' => 'Nomor telepon penumpang hanya boleh berisi angka atau simbol telepon yang valid.',
             'booking_email.required' => 'Email pemesan wajib diisi.',
             'booking_email.email' => 'Format email pemesan tidak valid.',
             'departure_slots.array' => 'Format filter waktu keberangkatan tidak valid.',

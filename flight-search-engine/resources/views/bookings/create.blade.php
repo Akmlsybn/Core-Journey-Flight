@@ -14,6 +14,8 @@
         $bookingEmail = old('booking_email', '');
         $passengerNames = old('passenger_names', array_fill(0, max((int) $passengerCount, 1), ''));
         $passengerNiks = old('passenger_niks', array_fill(0, max((int) $passengerCount, 1), ''));
+        $passengerDobs = old('passenger_dobs', array_fill(0, max((int) $passengerCount, 1), ''));
+        $passengerPhones = old('passenger_phones', array_fill(0, max((int) $passengerCount, 1), ''));
     @endphp
 
     <div class="mx-auto max-w-4xl space-y-8">
@@ -139,6 +141,33 @@
                             @error('passenger_niks.' . $i)
                                 <p class="text-sm text-rose-300">{{ $message }}</p>
                             @enderror
+
+                            <label for="passenger_dobs_{{ $i }}" class="mt-3 block text-sm font-medium text-slate-200">{{ __('passenger_dob_index', ['number' => $i + 1]) }}</label>
+                            <input
+                                type="date"
+                                id="passenger_dobs_{{ $i }}"
+                                name="passenger_dobs[]"
+                                value="{{ $passengerDobs[$i] ?? '' }}"
+                                class="block w-full rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white shadow-inner focus:border-sky-500/50 focus:outline-none focus:ring-2 focus:ring-sky-500/40 @error('passenger_dobs.' . $i) border-rose-400/60 focus:border-rose-400/70 focus:ring-rose-400/40 @enderror"
+                            >
+                            @error('passenger_dobs.' . $i)
+                                <p class="text-sm text-rose-300">{{ $message }}</p>
+                            @enderror
+
+                            <label for="passenger_phones_{{ $i }}" class="mt-3 block text-sm font-medium text-slate-200">{{ __('passenger_phone_index', ['number' => $i + 1]) }}</label>
+                            <input
+                                type="text"
+                                id="passenger_phones_{{ $i }}"
+                                name="passenger_phones[]"
+                                value="{{ $passengerPhones[$i] ?? '' }}"
+                                placeholder="{{ __('passenger_phone_placeholder') }}"
+                                inputmode="tel"
+                                autocomplete="tel"
+                                class="block w-full rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white shadow-inner placeholder:text-slate-500 focus:border-sky-500/50 focus:outline-none focus:ring-2 focus:ring-sky-500/40 @error('passenger_phones.' . $i) border-rose-400/60 focus:border-rose-400/70 focus:ring-rose-400/40 @enderror"
+                            >
+                            @error('passenger_phones.' . $i)
+                                <p class="text-sm text-rose-300">{{ $message }}</p>
+                            @enderror
                         </div>
                     @endfor
 
@@ -147,6 +176,12 @@
                             <p class="text-sm text-rose-300">{{ $message }}</p>
                         @enderror
                         @error('passenger_niks')
+                            <p class="text-sm text-rose-300">{{ $message }}</p>
+                        @enderror
+                        @error('passenger_dobs')
+                            <p class="text-sm text-rose-300">{{ $message }}</p>
+                        @enderror
+                        @error('passenger_phones')
                             <p class="text-sm text-rose-300">{{ $message }}</p>
                         @enderror
                     </div>

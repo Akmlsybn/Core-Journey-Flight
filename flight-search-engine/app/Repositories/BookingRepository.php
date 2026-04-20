@@ -55,6 +55,8 @@ class BookingRepository implements BookingRepositoryInterface
                     $booking->passengers()->create([
                         'name' => $passengerData['name'],
                         'id_number' => $passengerData['id_number'],
+                        'date_of_birth' => $passengerData['date_of_birth'] ?? null,
+                        'phone' => $passengerData['phone'] ?? null,
                         'seat_class' => $passengerData['seat_class'],
                     ]);
                 }

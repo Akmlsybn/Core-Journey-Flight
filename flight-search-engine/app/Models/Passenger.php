@@ -11,10 +11,13 @@ class Passenger extends Model
         'booking_id',
         'name',
         'id_number',
+        'date_of_birth',
+        'phone',
         'seat_class',
     ];
 
     protected $casts = [
+        'date_of_birth' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

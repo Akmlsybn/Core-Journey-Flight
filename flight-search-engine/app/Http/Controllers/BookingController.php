@@ -372,6 +372,8 @@ class BookingController extends Controller
         $passengerCount = max(1, (int) ($validated['passenger_count'] ?? 1));
         $passengerNames = $validated['passenger_names'] ?? [];
         $passengerNiks = $validated['passenger_niks'] ?? [];
+        $passengerDobs = $validated['passenger_dobs'] ?? [];
+        $passengerPhones = $validated['passenger_phones'] ?? [];
         $seatClass = (string) ($validated['seat_class'] ?? 'economy');
 
         $passengers = [];
@@ -380,6 +382,8 @@ class BookingController extends Controller
             $passengers[] = [
                 'name' => trim((string) ($passengerNames[$i - 1] ?? $fallbackName)),
                 'id_number' => trim((string) ($passengerNiks[$i - 1] ?? '')),
+                'date_of_birth' => (string) ($passengerDobs[$i - 1] ?? ''),
+                'phone' => trim((string) ($passengerPhones[$i - 1] ?? '')),
                 'seat_class' => $seatClass,
             ];
         }
